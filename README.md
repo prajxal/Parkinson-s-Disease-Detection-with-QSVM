@@ -1,133 +1,81 @@
-# Quantum vs Classical ML for Parkinson's Disease Detection
+# Parkinson's Disease Detection with QSVM
 
-This project compares classical machine learning models with quantum kernel methods for Parkinson's disease classification using voice features from the UCI Parkinsons dataset.
+This project implements a pipeline for detecting Parkinson's Disease from medical images (MRI) using a CNN feature extractor followed by a Quantum Support Vector Machine (QSVM). It also supports a classical baseline on voice data.
 
-## Features
+## Project Structure
 
-- **Comprehensive EDA**: Summary statistics, histograms, class balance analysis, subject counts, correlation matrices
-- **Classical Baselines**: Logistic Regression, Random Forest, and SVM (RBF kernel)
-- **Quantum Kernel SVM**: Implementation using PennyLane with angle-encoding quantum feature maps
-- **Subject-wise Splitting**: Prevents data leakage by ensuring all recordings from a subject are in the same fold
-- **Bootstrap Confidence Intervals**: Statistical analysis with 95% CIs for all metrics
-- **Comprehensive Visualizations**: ROC curves, confusion matrices, metric comparisons
-- **Model Persistence**: Saves trained models and kernel matrices to disk
-
-## Dataset
-
-### UCI Parkinsons Dataset (Voice Features)
-- **Source**: https://archive.ics.uci.edu/ml/datasets/Parkinsons
-- **Instances**: 197 voice recordings from 31 people (23 with PD, 8 healthy)
-- **Features**: 22 voice measurements
-- **Target**: Binary classification (0=healthy, 1=Parkinson's disease)
-
-### Parkinsons Telemonitoring Dataset
-- **Source**: https://archive.ics.uci.edu/ml/datasets/Parkinsons+Telemonitoring
-- **Instances**: 5,875 recordings from 42 people with early-stage PD
-- **Features**: 16 voice measures + demographic info
-- **Target**: Regression (UPDRS scores)
-
-## Installation
-
-1. Clone this repository or download the notebook
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
+```
+ML Project/
+├─ data/
+│  ├─ ntua-parkinson-dataset-master/   # Place image dataset here
+│  └─ parkinsons.data                  # Voice dataset (baseline)
+├─ src/
+│  ├─ data_loader.py                   # Image loading & manifest
+│  ├─ cnn_feature_extractor.py         # ResNet18 feature extraction
+│  ├─ embeddings_utils.py              # Subject aggregation
+│  ├─ pca_qs_pipeline.py               # PCA + QSVM pipeline
+│  ├─ quantum_kernel.py                # PennyLane kernel & Nyström
+│  ├─ eval_metrics.py                  # Metrics & Plotting
+│  └─ run_experiments.py               # Main script
+├─ outputs/                            # Results & Artifacts
+│  ├─ plots/                           # Generated plots (EDA, ROC, etc.)
+│  ├─ eda.html                         # EDA Report
+│  └─ ...
+├─ notebooks/
+│  ├─ eda.ipynb                        # Exploratory Data Analysis
+│  └─ quick_smoke_test.ipynb           # Smoke test on voice data
+├─ generate_eda_notebook.py            # Script to generate EDA notebook
+└─ run_smoke_test_verify.py            # Verification script
 ```
 
-Or install manually:
-```bash
-pip install numpy pandas scikit-learn matplotlib seaborn pennylane scipy joblib tqdm
-```
+## Setup
+
+1. **Environment**: Python 3.11+ recommended.
+2. **Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ## Usage
 
-1. Ensure the data files are in the correct location:
-   - `parkinsons/parkinsons.data`
-   - `parkinsons/telemonitoring/parkinsons_updrs.data`
-
-2. Open the Jupyter notebook:
+### 1. Full Image Pipeline
+Run the complete pipeline to extract features, train models, and evaluate:
 ```bash
-jupyter notebook parkinsons_quantum_ml_analysis.ipynb
+python src/run_experiments.py --data_path data/ntua-parkinson-dataset-master --pca_dims 4,8,16
 ```
 
-3. Configure hyperparameters in the first code cell (Section 1):
-   - `N_QUBITS`: Number of qubits for quantum feature map (default: 4)
-   - `N_LAYERS`: Number of layers in quantum circuit (default: 2)
-   - `USE_HARDWARE`: Set to `True` if using IBM Quantum hardware
-   - `N_SPLITS`: Number of cross-validation folds (default: 5)
-   - `PCA_VARIANCE_THRESHOLD`: Variance to retain in PCA (default: 0.95)
+**Options**:
+- `--pca_dims`: Comma-separated list of PCA dimensions to test (e.g., "4,8,16").
+- `--n_qubits`: Number of qubits (default: 0 = auto-match PCA dim).
+- `--nystrom_m`: Number of landmarks for Nyström approximation (default: 200).
+- `--force_extract`: Force re-running CNN feature extraction.
 
-4. Run all cells sequentially
+### 2. Exploratory Data Analysis (EDA)
+After running the pipeline (which generates embeddings), you can generate an EDA report:
+```bash
+# Generate and execute the EDA notebook
+python generate_eda_notebook.py && jupyter nbconvert --to notebook --execute --inplace notebooks/eda.ipynb && jupyter nbconvert --to html notebooks/eda.ipynb --output-dir outputs/
+```
+This produces `outputs/eda.html` and plots in `outputs/plots/eda/`.
+
+### 3. Verification / Smoke Test
+To verify the pipeline on a small subset of data (or synthetic data):
+```bash
+python run_smoke_test_verify.py
+```
 
 ## Outputs
+Results are saved in `outputs/`:
+- `embeddings.npy`: Raw CNN features.
+- `embeddings_subjects.npy`: Aggregated subject features.
+- `results.json`: Detailed metrics for all folds and models.
+- `results_summary.csv`: Mean/Std of metrics.
+- `plots/`: ROC curves, confusion matrices, and EDA visualizations.
+- `eda.html`: HTML report of the EDA.
 
-The notebook generates the following outputs in the `outputs/` directory:
-
-- **Plots**:
-  - `class_distribution.png`: Class balance visualization
-  - `subject_analysis.png`: Recordings per subject analysis
-  - `feature_histograms.png`: Feature distributions by class
-  - `correlation_matrix.png`: Feature correlation heatmap
-  - `pca_variance.png`: PCA explained variance plot
-  - `metrics_comparison.png`: Model performance comparison
-  - `roc_curves.png`: ROC curves for all models
-  - `confusion_matrices.png`: Confusion matrices for all models
-
-- **Data Files**:
-  - `summary_statistics.csv`: Summary statistics for all features
-  - `results_summary.csv`: Model performance metrics with confidence intervals
-
-- **Models**:
-  - `model_logistic_regression.pkl`
-  - `model_random_forest.pkl`
-  - `model_svm_(rbf).pkl`
-  - `model_quantum_kernel_svm.pkl`
-  - `scaler.pkl`: StandardScaler object
-  - `pca.pkl`: PCA object
-
-- **Kernel Matrices**:
-  - `quantum_kernel_train.npy`: Training quantum kernel matrix
-  - `quantum_kernel_test.npy`: Test quantum kernel matrix
-
-## Using IBM Quantum Hardware
-
-To run on IBM Quantum hardware:
-
-1. Sign up at https://quantum-computing.ibm.com/
-2. Get your API token
-3. Install Qiskit:
-```bash
-pip install qiskit qiskit-ibm-provider
-```
-4. In the notebook, set:
-   - `USE_HARDWARE = True`
-   - `IBM_DEVICE = 'your_device_name'` (e.g., 'ibmq_lima')
-5. Uncomment and configure the IBMQ authentication code in Section 6.1
-
-## Clinical Limitations
-
-⚠️ **Important**: This is a research/educational tool. For clinical diagnosis:
-- Requires validation on larger, diverse populations
-- Should be used in conjunction with clinical assessment
-- Consider demographic and environmental factors
-- Voice features alone may not be sufficient for diagnosis
-
-## Methodology
-
-1. **Data Preprocessing**: Standardization and PCA dimensionality reduction
-2. **Subject-wise Splitting**: Ensures no data leakage between train/test sets
-3. **Cross-Validation**: Stratified K-fold with subject-wise splitting
-4. **Classical Models**: Standard scikit-learn implementations
-5. **Quantum Kernel**: Angle-encoding feature map with PennyLane
-6. **Evaluation**: ROC-AUC, accuracy, sensitivity, specificity with bootstrap CIs
-
-## References
-
-- Little MA, McSharry PE, Roberts SJ, Costello DAE, Moroz IM. 'Exploiting Nonlinear Recurrence and Fractal Scaling Properties for Voice Disorder Detection', BioMedical Engineering OnLine 2007, 6:23
-- Tsanas A, Little MA, McSharry PE, Ramig LO. 'Accurate telemonitoring of Parkinson's disease progression by non-invasive speech tests', IEEE Transactions on Biomedical Engineering (2009)
-
-## License
-
-This project is for educational and research purposes only.
-
-# Parkinson-s-Disease-Detection-with-QSVM
+## Key Features
+- **CNN Feature Extraction**: Uses ResNet18 (pretrained) to extract features from MRI slices.
+- **Subject Aggregation**: Aggregates slice-level features to subject-level using mean pooling.
+- **Quantum Kernel**: Implements a quantum kernel using PennyLane.
+- **Nyström Approximation**: Scales the quantum kernel to larger datasets.
+- **EDA**: Comprehensive exploratory data analysis of the embeddings.
