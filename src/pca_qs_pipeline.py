@@ -194,7 +194,9 @@ def run_pipeline(embeddings_path, manifest_path, output_dir, pca_dims=[4, 6, 8],
             'acc_mean': group['accuracy'].mean(),
             'acc_std': group['accuracy'].std(),
             'auc_mean': group['auc'].mean(),
-            'auc_std': group['auc'].std()
+            'auc_std': group['auc'].std(),
+            'f1_mean': group['f1'].mean(),
+            'f1_std': group['f1'].std()
         }
         summary.append(rec)
         

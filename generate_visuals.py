@@ -22,6 +22,14 @@ def generate_visuals(output_dir='outputs'):
     plt.ylim(0, 1.05)
     plt.savefig(os.path.join(output_dir, 'plots', 'auc_bar.png'))
     plt.close()
+
+    # 1b. F1 Score Bar Chart
+    plt.figure(figsize=(12, 6))
+    sns.barplot(data=results_df, x='pca_dim', y='f1', hue='model', errorbar='sd')
+    plt.title('F1 Score by Model and PCA Dimension')
+    plt.ylim(0, 1.05)
+    plt.savefig(os.path.join(output_dir, 'plots', 'f1_bar.png'))
+    plt.close()
     
     # 2. ROC Curves (Fallback using TPR/FPR points)
     # We don't have full curves, but we have TPR (sensitivity) and TNR (specificity) -> FPR = 1 - Specificity
